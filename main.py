@@ -1,214 +1,200 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
-
-
 # ------------------------------
-#   FONCTIONS
+#   VARIABLES GLOBALES CHIP-8
 # ------------------------------
 
-rom_bytes = None  # stockage de la ROM chargée
-memory = [0] * 4096
-display = [[0]*64 for _ in range(32)]
+rom = None  # contenu binaire de la ROM
+memoire = [0] * 4096  # mémoire CHIP-8
+ecran = [[0]*64 for _ in range(32)]  # écran 64x32
 
-# registres CHIP-8
-V = [0] * 16
-I = 0
-pc = 0x200
+V = [0] * 16  # registres V0 à VF
+I = 0  # registre d'adresse
+pc = 0x200  # program counter (début des ROM)
 
-def sel_rom():
-    global rom_bytes
-    path = filedialog.askopenfilename(
+# clavier CHIP-8 (16 touches)
+clavier = [0] * 16
+
+# mapping clavier PC → CHIP-8
+mapping_touch = {
+    '1': 0x1, '2': 0x2, '3': 0x3, '4': 0xC,
+    'q': 0x4, 'w': 0x5, 'e': 0x6, 'r': 0xD,
+    'a': 0x7, 's': 0x8, 'd': 0x9, 'f': 0xE,
+    'z': 0xA, 'x': 0x0, 'c': 0xB, 'v': 0xF
+}
+
+# ------------------------------
+#   GESTION DU CLAVIER
+# ------------------------------
+
+def touche_appuyee(event):
+    touche = event.char.lower()
+    if touche in mapping_touch:
+        clavier[mapping_touch[touche]] = 1
+        print("Touche pressée :", mapping_touch[touche])
+
+def touche_relachee(event):
+    touche = event.char.lower()
+    if touche in mapping_touch:
+        clavier[mapping_touch[touche]] = 0
+
+# ------------------------------
+#   CHARGEMENT ROM
+# ------------------------------
+
+def charger_rom():
+    global rom
+
+    chemin = filedialog.askopenfilename(
         title="Sélectionner une ROM CHIP-8",
         filetypes=[("Fichier CHIP-8", "*.ch8")]
     )
 
-    if not path:
+    if not chemin:
         return
 
-    print(f"\n=== ROM sélectionnée ===\n{path}\n")
-
     try:
-        with open(path, "rb") as f:
-            rom_bytes = f.read()
-            for i, b in enumerate(rom_bytes):
-                memory[0x200 + i] = b
+        with open(chemin, "rb") as f:
+            rom = f.read()
 
-        print(f"Taille ROM : {len(rom_bytes)} octets")
+            # chargement en mémoire à partir de 0x200
+            for i, octet in enumerate(rom):
+                memoire[0x200 + i] = octet
+
+        print("ROM chargée :", chemin)
+        print("Taille :", len(rom), "octets")
 
     except Exception as e:
-        messagebox.showerror("Erreur", f"Impossible de lire la ROM :\n{e}")
+        messagebox.showerror("Erreur", str(e))
 
+# ------------------------------
+#   EXECUTION CPU
+# ------------------------------
 
-def show_sprite():
-    if rom_bytes is None:
-        messagebox.showerror("Erreur", "Aucune ROM chargée.")
+def executer_cycle():
+    global pc, I
+
+    if rom is None:
         return
 
-    try:
-        addr = int(entry_addr.get(), 16)
-    except:
-        messagebox.showerror("Erreur", "Adresse invalide (utilise l’hex : 300, 2A0, etc.)")
+    # FETCH
+    opcode = (memoire[pc] << 8) | memoire[pc + 1]
+    print("PC:", hex(pc), "Opcode:", hex(opcode))
+
+    # DECODE + EXECUTE
+
+    # 00E0 → clear screen
+    if opcode == 0x00E0:
+        print("Clear screen")
+        for y in range(32):
+            for x in range(64):
+                ecran[y][x] = 0
+
+    # 1NNN → jump
+    elif opcode & 0xF000 == 0x1000:
+        pc = opcode & 0x0FFF
         return
 
-    # On récupère les lignes du sprite
-    height = int(entry_height.get())
-    sprite = memory[addr:addr + height]
+    # 6XKK → VX = KK
+    elif opcode & 0xF000 == 0x6000:
+        x = (opcode & 0x0F00) >> 8
+        kk = opcode & 0x00FF
+        V[x] = kk
 
-    if len(sprite) < height:
-        messagebox.showerror("Erreur", "Adresse hors ROM.")
-        return
+    # 7XKK → VX += KK
+    elif opcode & 0xF000 == 0x7000:
+        x = (opcode & 0x0F00) >> 8
+        kk = opcode & 0x00FF
+        V[x] = (V[x] + kk) & 0xFF  # limite à 8 bits
 
-    draw_sprite(sprite)
+    # ANNN → I = NNN
+    elif opcode & 0xF000 == 0xA000:
+        I = opcode & 0x0FFF
 
+    # DXYN → dessiner sprite
+    elif opcode & 0xF000 == 0xD000:
 
-def draw_sprite(sprite_data):
-    win = tk.Toplevel()
-    win.title("Aperçu Sprite CHIP-8")
+        x = V[(opcode & 0x0F00) >> 8]
+        y = V[(opcode & 0x00F0) >> 4]
+        n = opcode & 0x000F
 
-    pixel_size = 64
-    width = 32 * pixel_size
-    height = len(sprite_data) * pixel_size
-
-    canvas = tk.Canvas(win, width=width, height=height, bg="black")
-    canvas.pack()
-
-    for row_index, byte in enumerate(sprite_data): #BOUCLE FOR POUR COMPRENDRE LES SPRITS POUR LA MACHINE
-        for bit_index in range(8):
-            bit = (byte >> (7 - bit_index)) & 1
-            if bit == 1:
-                x = bit_index * pixel_size
-                y = row_index * pixel_size
-                canvas.create_rectangle(
-                    x, y, x + pixel_size, y + pixel_size,
-                    fill="white", outline=""
-                )
-
-def execute_cycle():
-        global pc, I
-
-        opcode = (memory[pc] << 8) | memory[pc + 1]
-
-        print("Opcode:", hex(opcode))
-
-        # 00E0 -> clear screen
-        if opcode == 0x00E0:
-            print("Clear screen")
-
-        # 1NNN -> jump
-        elif opcode & 0xF000 == 0x1000:
-            addr = opcode & 0x0FFF
-            pc = addr
-            return
-
-        # 6XKK -> VX = KK
-        elif opcode & 0xF000 == 0x6000:
-
-            x = (opcode & 0x0F00) >> 8
-            kk = opcode & 0x00FF
-
-            V[x] = kk
-            print(f"V{x} = {kk}")
-
-        # 7XKK -> VX += KK
-        elif opcode & 0xF000 == 0x7000:
-            x = (opcode & 0x0F00) >> 8
-            kk = opcode & 0x00FF
-            V[x] += kk
-            print(f"V{x} += {kk}")
-
-        # ANNN -> I = NNN
-        elif opcode & 0xF000 == 0xA000:
-
-            I = opcode & 0x0FFF
-            print("I =", hex(I))
-
-        elif opcode & 0xF000 == 0xD000:
-
-            x = V[(opcode & 0x0F00) >> 8]
-            y = V[(opcode & 0x00F0) >> 4]
-            n = opcode & 0x000F
-
-        print("Draw sprite")
-
-        for row in range(n):
-
-            sprite_byte = memory[I + row]
+        for ligne in range(n):
+            octet = memoire[I + ligne]
 
             for col in range(8):
-
-                pixel = (sprite_byte >> (7 - col)) & 1
+                pixel = (octet >> (7 - col)) & 1
 
                 if pixel == 1:
                     px = (x + col) % 64
-                    py = (y + row) % 32
+                    py = (y + ligne) % 32
 
-                    display[py][px] ^= 1
-        else:
-            print("Opcode inconnu")
+                    ecran[py][px] ^= 1
 
-        draw_display()
-        pc += 2
+        dessiner_ecran()
 
-def draw_display():
-    win = tk.Toplevel()
-    win.title("Ecran CHIP-8")
+    # EX9E → touche pressée
+    elif opcode & 0xF0FF == 0xE09E:
+        x = (opcode & 0x0F00) >> 8
+        if clavier[V[x]] == 1:
+            pc += 2
 
-    pixel_size = 10
+    # EXA1 → touche NON pressée
+    elif opcode & 0xF0FF == 0xE0A1:
+        x = (opcode & 0x0F00) >> 8
+        if clavier[V[x]] == 0:
+            pc += 2
 
-    canvas = tk.Canvas(win, width=64*pixel_size, height=32*pixel_size, bg="black")
+    else:
+        print("Opcode inconnu")
+
+    pc += 2
+
+# ------------------------------
+#   AFFICHAGE
+# ------------------------------
+
+def dessiner_ecran():
+    fen = tk.Toplevel()
+    fen.title("Ecran CHIP-8")
+
+    taille_pixel = 10
+    canvas = tk.Canvas(fen, width=64*taille_pixel, height=32*taille_pixel, bg="black")
     canvas.pack()
 
     for y in range(32):
         for x in range(64):
-
-            if display[y][x] == 1:
-
+            if ecran[y][x] == 1:
                 canvas.create_rectangle(
-                    x*pixel_size,
-                    y*pixel_size,
-                    (x+1)*pixel_size,
-                    (y+1)*pixel_size,
+                    x*taille_pixel,
+                    y*taille_pixel,
+                    (x+1)*taille_pixel,
+                    (y+1)*taille_pixel,
                     fill="white",
                     outline=""
                 )
 
-def cpu_loop():
-    execute_cycle()
-
-    # relance la boucle toutes les 200 ms
-    root.after(200, cpu_loop)
-
-
 # ------------------------------
-#   INTERFACE GRAPHIQUE
+#   BOUCLE CPU
 # ------------------------------
 
-root = tk.Tk() #ON IMPORTE LA CLASS TK
-root.title("Lecteur de ROM CHIP-8 + Afficheur Sprite")
-root.geometry("330x220") #taille de la fenetre
-root.resizable(False, False)
+def boucle_cpu():
+    executer_cycle()
+    root.after(200, boucle_cpu)
 
-btn_rom = tk.Button(root, text="Sélectionner une ROM .ch8", command=sel_rom) #bouton
-btn_rom.pack(pady=10)
+# ------------------------------
+#   INTERFACE
+# ------------------------------
 
-frame = tk.Frame(root)
-frame.pack(pady=10)
+root = tk.Tk()
+root.title("Emulateur CHIP-8 (début)")
+root.geometry("300x200")
 
-tk.Label(frame, text="Adresse HEX du sprite :").grid(row=0, column=0)
-entry_addr = tk.Entry(frame, width=8)
-entry_addr.insert(0, "300")
-entry_addr.grid(row=0, column=1)
+# gestion clavier
+root.bind("<KeyPress>", touche_appuyee)
+root.bind("<KeyRelease>", touche_relachee)
 
-tk.Label(frame, text="Hauteur (lignes) :").grid(row=1, column=0)
-entry_height = tk.Entry(frame, width=8)
-entry_height.insert(0, "5")
-entry_height.grid(row=1, column=1)
-
-btn_show = tk.Button(root, text="Afficher sprite", command=show_sprite)
-btn_show.pack(pady=15)
-
-btn_run = tk.Button(root, text="Lancer CPU", command=cpu_loop)
-btn_run.pack(pady=10)
+tk.Button(root, text="Charger ROM", command=charger_rom).pack(pady=10)
+tk.Button(root, text="Lancer CPU", command=boucle_cpu).pack(pady=10)
 
 root.mainloop()
