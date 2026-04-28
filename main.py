@@ -12,7 +12,7 @@ ecran = [[0]*64 for _ in range(32)]  # écran 64x32
 V = [0] * 16  # registres V0 à VF
 I = 0  # registre d'adresse
 pc = 0x200  # program counter (début des ROM)
-
+stack = []
 # clavier CHIP-8 (16 touches)
 clavier = [0] * 16
 
@@ -23,6 +23,9 @@ mapping_touch = {
     'a': 0x7, 's': 0x8, 'd': 0x9, 'f': 0xE,
     'z': 0xA, 'x': 0x0, 'c': 0xB, 'v': 0xF
 }
+#timer son
+delay_timer = 0
+sound_timer = 0
 
 # ------------------------------
 #   GESTION DU CLAVIER
@@ -45,6 +48,14 @@ def touche_relachee(event):
 
 def charger_rom():
     global rom
+    global pc
+    pc = 0x200
+    global memoire, ecran, V, I
+
+    memoire = [0] * 4096
+    ecran = [[0] * 64 for _ in range(32)]
+    V = [0] * 16
+    I = 0
 
     chemin = filedialog.askopenfilename(
         title="Sélectionner une ROM CHIP-8",
@@ -78,11 +89,16 @@ def executer_cycle():
     if rom is None:
         return
 
+    if pc >= 0x200 + len(rom):
+        print("Fin de la ROM")
+        return
+
     # FETCH
     opcode = (memoire[pc] << 8) | memoire[pc + 1]
     print("PC:", hex(pc), "Opcode:", hex(opcode))
 
     # DECODE + EXECUTE
+
 
     # 00E0 → clear screen
     if opcode == 0x00E0:
@@ -118,6 +134,7 @@ def executer_cycle():
         x = V[(opcode & 0x0F00) >> 8]
         y = V[(opcode & 0x00F0) >> 4]
         n = opcode & 0x000F
+        V[0xF] = 0
 
         for ligne in range(n):
             octet = memoire[I + ligne]
@@ -133,6 +150,17 @@ def executer_cycle():
 
         dessiner_ecran()
 
+    # 2NNN → CALL
+    elif opcode & 0xF000 == 0x2000:
+        stack.append(pc)
+        pc = opcode & 0x0FFF
+        return
+
+    # 00EE → RETURN
+    elif opcode == 0x00EE:
+        pc = stack.pop()
+        return
+
     # EX9E → touche pressée
     elif opcode & 0xF0FF == 0xE09E:
         x = (opcode & 0x0F00) >> 8
@@ -145,31 +173,79 @@ def executer_cycle():
         if clavier[V[x]] == 0:
             pc += 2
 
+    elif opcode & 0xF000 == 0x3000:
+        x = (opcode & 0x0F00) >> 8
+        kk = opcode & 0x00FF
+
+        if V[x] == kk:
+            pc += 2
+
+    elif opcode & 0xF000 == 0x4000:
+        x = (opcode & 0x0F00) >> 8
+        kk = opcode & 0x00FF
+
+        if V[x] != kk:
+            pc += 2
+
+    elif opcode & 0xF000 == 0x8000:
+
+        x = (opcode & 0x0F00) >> 8
+        y = (opcode & 0x00F0) >> 4
+        n = opcode & 0x000F
+
+        if n == 0x0:  # VX = VY
+            V[x] = V[y]
+
+        elif n == 0x1:  # OR
+            V[x] |= V[y]
+
+        elif n == 0x2:  # AND
+            V[x] &= V[y]
+
+        elif n == 0x3:  # XOR
+            V[x] ^= V[y]
+
+    elif opcode & 0xF0FF == 0xF029:
+        x = (opcode & 0x0F00) >> 8
+        I = V[x] * 5
+
+    elif opcode & 0xF0FF == 0xF055:
+        x = (opcode & 0x0F00) >> 8
+        for i in range(x + 1):
+            memoire[I + i] = V[i]
+
+    elif opcode & 0xF0FF == 0xF065:
+        x = (opcode & 0x0F00) >> 8
+        for i in range(x + 1):
+            V[i] = memoire[I + i]
+
+
+
+
     else:
         print("Opcode inconnu")
 
     pc += 2
+    print("PC:", hex(pc))
+    print("PC:", hex(pc), "Mémoire:", hex(memoire[pc]), hex(memoire[pc + 1]))
 
 # ------------------------------
 #   AFFICHAGE
 # ------------------------------
 
 def dessiner_ecran():
-    fen = tk.Toplevel()
-    fen.title("Ecran CHIP-8")
+    canvas.delete("all")
 
     taille_pixel = 10
-    canvas = tk.Canvas(fen, width=64*taille_pixel, height=32*taille_pixel, bg="black")
-    canvas.pack()
 
     for y in range(32):
         for x in range(64):
             if ecran[y][x] == 1:
                 canvas.create_rectangle(
-                    x*taille_pixel,
-                    y*taille_pixel,
-                    (x+1)*taille_pixel,
-                    (y+1)*taille_pixel,
+                    x * taille_pixel,
+                    y * taille_pixel,
+                    (x + 1) * taille_pixel,
+                    (y + 1) * taille_pixel,
                     fill="white",
                     outline=""
                 )
@@ -180,15 +256,17 @@ def dessiner_ecran():
 
 def boucle_cpu():
     executer_cycle()
-    root.after(200, boucle_cpu)
+    root.after(2, boucle_cpu)
+
 
 # ------------------------------
 #   INTERFACE
 # ------------------------------
 
+
 root = tk.Tk()
 root.title("Emulateur CHIP-8 (début)")
-root.geometry("300x200")
+root.geometry("660x370")
 
 # gestion clavier
 root.bind("<KeyPress>", touche_appuyee)
@@ -196,5 +274,12 @@ root.bind("<KeyRelease>", touche_relachee)
 
 tk.Button(root, text="Charger ROM", command=charger_rom).pack(pady=10)
 tk.Button(root, text="Lancer CPU", command=boucle_cpu).pack(pady=10)
+
+canvas = tk.Canvas(root, width=640, height=320)
+canvas.pack()
+
+
+ecran[10][10] = 1
+dessiner_ecran()
 
 root.mainloop()
