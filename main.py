@@ -13,6 +13,11 @@ V = [0] * 16  # registres V0 à VF
 I = 0  # registre d'adresse
 pc = 0x200  # program counter (début des ROM)
 stack = []
+
+
+# ------------------------------
+#   GESTION DU CLAVIER
+# ------------------------------
 # clavier CHIP-8 (16 touches)
 clavier = [0] * 16
 
@@ -27,9 +32,6 @@ mapping_touch = {
 delay_timer = 0
 sound_timer = 0
 
-# ------------------------------
-#   GESTION DU CLAVIER
-# ------------------------------
 
 def touche_appuyee(event):
     touche = event.char.lower()
@@ -41,6 +43,7 @@ def touche_relachee(event):
     touche = event.char.lower()
     if touche in mapping_touch:
         clavier[mapping_touch[touche]] = 0
+        print("Touche relachee :", mapping_touch[touche])
 
 # ------------------------------
 #   CHARGEMENT ROM
