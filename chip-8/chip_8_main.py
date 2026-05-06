@@ -26,6 +26,7 @@ from tkinter import filedialog, messagebox
 fhgfjks
 """
 k=4
+h=5
 # ------------------------------
 #   GESTION DU CLAVIER / TIMER SOUND
 # ------------------------------
