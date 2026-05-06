@@ -17,6 +17,40 @@ from tkinter import filedialog, messagebox
 
 #Debut du code :
 # code de naîma et nada : à mettre ici
+# code de naima 
+# memoire et structure de base chip-8
+class Chip8:
+    def __init__(self):
+
+        # on cree 4096 cases de memoire
+        self.memory = [0] * 4096
+
+        # pour commencer le programme il faut 0x200
+        self.pc = 0x200
+
+        # on cree une pile de 16 emplacements
+        self.stack = [0] * 16
+
+        # la position de la pile
+        self.sp = 0
+
+    # ROM en mémoire
+    def load_rom(self, filename):
+
+        # on ouvre le fichier ROM en mode binaire
+        with open(filename, "rb") as file:
+            rom = file.read()
+
+        # on copie la ROM dans la memoire
+        for i in range(len(rom)):
+            self.memory[0x200 + i] = rom[i]
+      
+# TEST
+chip8 = Chip8()
+print("Mémoire :", len(chip8.memory))
+print("PC :", chip8.pc)
+print("SP :", chip8.sp)
+print("Pile :", len(chip8.stack))      
 
 
 # ------------------------------
