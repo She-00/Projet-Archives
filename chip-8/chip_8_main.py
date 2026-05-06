@@ -22,8 +22,10 @@ from tkinter import filedialog, messagebox
 # ------------------------------
 #   VARIABLES GLOBALES CHIP-8
 # ------------------------------
-
-
+"""
+fhgfjks
+"""
+k=4
 # ------------------------------
 #   GESTION DU CLAVIER / TIMER SOUND
 # ------------------------------
