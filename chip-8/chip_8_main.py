@@ -109,8 +109,13 @@ class Chip8:
             print("Sous-opcode 8XY",hex(n),"inconnu")
       
 
+# TEST
 chip8 = Chip8()
-print("=== TEST 6XNN : SET ===")
+print("Mémoire :", len(chip8.memory))
+print("PC :", chip8.pc)
+print("SP :", chip8.sp)
+print("Pile :", len(chip8.stack))
+print("TEST 6XNN : SET")
 chip8.execute_opcode(0x6A42)
 print("V[10] =",chip8.V[10],"(attendu : 66)")
 # ------------------------------
