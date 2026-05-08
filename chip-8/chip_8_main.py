@@ -17,14 +17,111 @@ from tkinter import filedialog, messagebox
 
 #Debut du code :
 # code de naîma et nada : à mettre ici
+# code de naima 
+# memoire et structure de base chip-8
+class Chip8:
+    def __init__(self):
+
+        # on cree 4096 cases de memoire
+        self.memory = [0] * 4096
+
+        # pour commencer le programme il faut 0x200
+        self.pc = 0x200
+
+        # on cree une pile de 16 emplacements
+        self.stack = [0] * 16
+
+        # la position de la pile
+        self.sp = 0
+
+        self.V = [0] * 16
+
+    # ROM en mémoire
+    def load_rom(self, filename):
+
+        # on ouvre le fichier ROM en mode binaire
+        with open(filename, "rb") as file:
+            rom = file.read()
+
+        # on copie la ROM dans la memoire
+        for i in range(len(rom)):
+            self.memory[0x200 + i] = rom[i]
 
 
+    def execute_opcode(self,opcode):
+        x = (opcode & 0x0F00) >> 8
+        y = (opcode & 0x00F0) >> 4
+        nn = opcode & 0x00FF
+
+        if (opcode & 0xF000) == 0x6000:
+            self.op_6XNN(x, nn)
+
+        elif (opcode & 0xF000) == 0x7000:
+            self.op_7XNN(x, nn)
+
+        elif (opcode & 0xF000) == 0x8000:
+            n = opcode & 0x000F
+            self.op_8XYN(x, y, n)
+
+        else:
+            print("Opcode inconnu :",hex(opcode))
+
+
+    def op_6XNN(self, x, nn):
+        self.V[x] = nn
+
+    def op_7XNN(self, x, nn):
+        self.V[x] = (self.V[x] + nn) & 0xFF
+
+
+    def op_8XYN(self, x, y, n):
+        if n == 0x0:
+            self.V[x] = self.V[y]
+
+        elif n == 0x1:
+            self.V[x] = self.V[x] & self.V[y]
+
+        elif n == 0x2:
+            self.V[x] = self.V[x] ^ self.V[y]
+
+        elif n == 0x3:
+            resultat = self.V[x] + self.V[y]
+            self.V[0xF] = 1 if resultat > 0xFF else 0
+            self.V[x] = resultat & 0xFF
+
+        elif n == 0x4:
+            self.V[0xF] = 1 if self.V[x] > self.V[y] else 0
+            self.V[x] = (self.V[x] - self.V[y]) & 0xFF
+
+        elif n == 0x5:
+            self.V[0xF] = 1 if self.V[y] > self.V[x] else 0
+            self.V[x] = (self.V[y] - self.V[x]) & 0xFF
+
+        elif n == 0x6:
+            self.V[0xF] = self.V[x] & 0x1
+            self.V[x] = self.V[x] >> 1
+
+        elif n == 0xE:
+            self.V[0xF] = (self.V[x] >> 7) & 0x1
+            self.V[x] = (self.V[x] << 1) & 0xFF
+
+        else:
+            print("Sous-opcode 8XY",hex(n),"inconnu")
+      
+
+# TEST
+chip8 = Chip8()
+print("Mémoire :", len(chip8.memory))
+print("PC :", chip8.pc)
+print("SP :", chip8.sp)
+print("Pile :", len(chip8.stack))
+print("TEST 6XNN : SET")
+chip8.execute_opcode(0x6A42)
+print("V[10] =",chip8.V[10],"(attendu : 66)")
 # ------------------------------
 #   VARIABLES GLOBALES CHIP-8
 # ------------------------------
-"""
-fhgfjks
-"""
+
 k=4
 h=5
 u=4
