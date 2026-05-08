@@ -72,7 +72,50 @@ def touche_relachee(event):
 # ------------------------------
 #   BOUCLE CPU
 # ------------------------------
+def executer_cycle():
+    global pc, I, stack
+    if pc >= 0x200 + len(rom):
+        print("Fin de la ROM")
+        return
 
+    # FETCH
+    opcode = (memoire[pc] << 8) | memoire[pc + 1]
+    print("PC:", hex(pc), "Opcode:", hex(opcode))
+
+    # Extraction des champs
+    x = (opcode >> 8) & 0xF
+    y = (opcode >> 4) & 0xF
+    n = opcode & 0xF
+    kk = opcode & 0xFF
+    nnn = opcode & 0x0FFF
+
+    # SAUTS, APPELS, COMPARAISONS person4
+    
+    if (opcode & 0xF000) == 0x1000:          
+        pc = nnn
+        return
+    elif (opcode & 0xF000) == 0x2000:        
+        stack.append(pc)
+        pc = nnn
+        return
+    elif opcode == 0x00EE:                  
+        pc = stack.pop()
+        return
+    elif (opcode & 0xF000) == 0x3000:        
+        if V[x] == kk:
+            pc += 2
+    elif (opcode & 0xF000) == 0x4000:        
+        if V[x] != kk:
+            pc += 2
+    elif (opcode & 0xF00F) == 0x5000:        
+        if V[x] == V[y]:
+            pc += 2
+    elif (opcode & 0xF00F) == 0x9000:        
+        if V[x] != V[y]:
+            pc += 2
+    elif (opcode & 0xF000) == 0xB000:       
+        pc = nnn + V[0]
+        return
 
 
 
