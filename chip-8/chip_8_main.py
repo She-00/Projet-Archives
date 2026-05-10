@@ -34,6 +34,9 @@ class Chip8:
         self.sp = 0
 
         self.V = [0] * 16
+        self.delay_timer = 0
+        self.sound_timer = 0
+        self.keys = [0] * 16
 
     # ROM en mémoire
     def load_rom(self, filename):
@@ -61,6 +64,24 @@ class Chip8:
         elif (opcode & 0xF000) == 0x8000:
             n = opcode & 0x000F
             self.op_8XYN(x, y, n)
+
+        elif (opcode & 0xF0FF) == 0xE09E:
+            self.op_EX9E(x)
+
+        elif (opcode & 0xF0FF) == 0xE0A1:
+            self.op_EXA1(x)
+
+        elif (opcode & 0xF0FF) == 0xF007:
+            self.op_FX07(x)
+
+        elif (opcode & 0xF0FF) == 0xF015:
+            self.op_FX15(x)
+
+        elif (opcode & 0xF0FF) == 0xF018:
+            self.op_FX18(x)
+
+        elif (opcode & 0xF0FF) == 0xF00A:
+            self.op_FX0A(x)
 
         else:
             print("Opcode inconnu :",hex(opcode))
@@ -106,6 +127,31 @@ class Chip8:
 
         else:
             print("Sous-opcode 8XY",hex(n),"inconnu")
+
+    def op_EX9E(self, x):
+        if self.keys[self.V[x]]:
+            self.pc += 2
+
+    def op_EXA1(self, x):
+        if not self.keys[self.V[x]]:
+            self.pc += 2
+
+    def op_FX07(self, x):
+        self.V[x] = self.delay_timer
+
+    def op_FX15(self, x):
+        self.delay_timer = self.V[x]
+
+    def op_FX18(self, x):
+        self.sound_timer = self.V[x]
+
+    def op_FX0A(self, x):
+        for i in range(16):
+            if self.keys[i]:
+                self.V[x] = i
+                return
+
+        self.pc -= 2
       
 
 # TEST
@@ -167,10 +213,8 @@ j=5
 #   GESTION DU CLAVIER / TIMER SOUND
 # ------------------------------
 
-
-# clavier CHIP-8 (16 touches)
-clavier = [0] * 16
-
+#clavier
+clavier = [0]* 16
 # mapping clavier PC → CHIP-8
 mapping_touch = {
     '1': 0x1, '2': 0x2, '3': 0x3, '4': 0xC,
@@ -178,21 +222,29 @@ mapping_touch = {
     'a': 0x7, 's': 0x8, 'd': 0x9, 'f': 0xE,
     'z': 0xA, 'x': 0x0, 'c': 0xB, 'v': 0xF
 }
-#timer son
-delay_timer = 0
-sound_timer = 0
 
 def touche_appuyee(event):
     touche = event.char.lower()
     if touche in mapping_touch:
         clavier[mapping_touch[touche]] = 1
+        chip8.keys[mapping_touch[touche]] = 1
         print("Touche pressée :", mapping_touch[touche])
 
 def touche_relachee(event):
     touche = event.char.lower()
     if touche in mapping_touch:
         clavier[mapping_touch[touche]] = 0
+        chip8.keys[mapping_touch[touche]] = 0
         print("Touche relachee :", mapping_touch[touche])
+
+def update_timers():
+    if chip8.delay_timer > 0:
+        chip8.delay_timer -= 1
+
+    if chip8.sound_timer > 0:
+        chip8.sound_timer -= 1
+        print("BEEP")
+
 
 
 
