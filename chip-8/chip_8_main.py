@@ -21,7 +21,6 @@ from tkinter import filedialog, messagebox
 # memoire et structure de base chip-8
 class Chip8:
     def __init__(self):
-        #naima
         # on cree 4096 cases de memoire
         self.memory = [0] * 4096
 
