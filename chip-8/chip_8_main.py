@@ -117,6 +117,44 @@ print("Pile :", len(chip8.stack))
 print("TEST 6XNN : SET")
 chip8.execute_opcode(0x6A42)
 print("V[10] =",chip8.V[10],"(attendu : 66)")
+
+# Code NADA : ajout de I, fetch, decode 
+def _patch_chip8():
+    # Ajouter I dans __init__
+    original_init = Chip8.__init__
+    def new_init(self):
+        original_init(self)
+        self.I = 0
+    Chip8.__init__ = new_init
+
+    # Ajouter fetch
+    def fetch(self):
+        opcode = (self.memory[self.pc] << 8) | self.memory[self.pc + 1]
+        self.pc += 2
+        return opcode
+    Chip8.fetch = fetch
+
+    # Ajouter decode et execute
+    def decode_and_execute(self, opcode):
+        high = (opcode & 0xF000) >> 12
+        if high == 0xA:
+            self.I = opcode & 0x0FFF
+        elif high == 0x6:
+            x = (opcode & 0x0F00) >> 8
+            nn = opcode & 0x00FF
+            self.V[x] = nn
+        else:
+            self.execute_opcode(opcode)
+    Chip8.decode_and_execute = decode_and_execute
+
+    # Ajouter cycle
+    def cycle(self):
+        opcode = self.fetch()
+        self.decode_and_execute(opcode)
+    Chip8.cycle = cycle
+
+_patch_chip8()
+# fin 
 # ------------------------------
 #   VARIABLES GLOBALES CHIP-8
 # ------------------------------
