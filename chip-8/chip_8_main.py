@@ -36,6 +36,7 @@ class Chip8:
         self.delay_timer = 0
         self.sound_timer = 0
         self.keys = [0] * 16
+        self.I = 0  # registre d'adresse (ajouté pour draw_sprite)
 
     # ROM en mémoire
     def load_rom(self, filename):
@@ -336,7 +337,54 @@ def executer_cycle():
 #   INTERFACE
 # ------------------------------
 
+#Code Bélinda
 
+SCALE    = 10
+WIDTH    = 64
+HEIGHT   = 32
+COLOR_ON = (255, 255, 255)
+COLOR_OFF = (0,   0,   0)
+
+# Grille de pixels : False = éteint, True = allumé
+screen = [[False] * WIDTH for _ in range(HEIGHT)]
+
+
+def draw_screen(window):
+    """Redessine toute la fenêtre à partir de la grille screen."""
+    window.fill((0, 0, 0))
+    for y in range(HEIGHT):
+        for x in range(WIDTH):
+            if screen[y][x]:
+                pygame.draw.rect(window, COLOR_ON,
+                                 (x * SCALE, y * SCALE, SCALE, SCALE))
+    pygame.display.flip()
+
+
+def clear_screen():
+    """Instruction 00E0 — Efface tous les pixels."""
+    for y in range(HEIGHT):
+        for x in range(WIDTH):
+            screen[y][x] = False
+
+
+def draw_sprite(chip, x_reg, y_reg, n):
+    """
+    Instruction DXYN — Dessine un sprite.
+    Utilise les registres et la mémoire de l'instance Chip8.
+    """
+    x_start = chip.V[x_reg] % WIDTH
+    y_start = chip.V[y_reg] % HEIGHT
+    chip.V[0xF] = 0   # reset collision
+
+    for row in range(n):
+        sprite_byte = chip.memory[chip.I + row]
+        for col in range(8):
+            if sprite_byte & (0x80 >> col):
+                x = (x_start + col) % WIDTH
+                y = (y_start + row) % HEIGHT
+                if screen[y][x]:
+                    chip.V[0xF] = 1       # collision
+                screen[y][x] ^= True      # XOR
 
 
 
