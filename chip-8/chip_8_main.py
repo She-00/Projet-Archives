@@ -325,7 +325,7 @@ pygame.init()
 clock = pygame.time.Clock()
 
 # charger ROM
-chip8.load_rom("PONG.ch8")
+chip8.load_rom("moving_sprite.ch8")
 
 
 # =========================================================
