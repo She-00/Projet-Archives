@@ -13,7 +13,7 @@ vous pouvez mettre un commentaire quand vous pusher le main pour voir ce que vou
 voila
 """
 import pygame
-
+import sys
 # =========================================================
 #                         CHIP-8
 # =========================================================
@@ -113,15 +113,13 @@ class Chip8:
             self.V[x] = self.V[y]
 
         elif n == 0x1:
-            self.V[x] = self.V[x] & self.V[y]
+            self.V[x] = self.V[x] | self.V[y]
 
         elif n == 0x2:
-            self.V[x] = self.V[x] ^ self.V[y]
+            self.V[x] = self.V[x] & self.V[y]
 
         elif n == 0x3:
-            resultat = self.V[x] + self.V[y]
-            self.V[0xF] = 1 if resultat > 0xFF else 0
-            self.V[x] = resultat & 0xFF
+            self.V[x] = self.V[x] ^ self.V[y]
 
         elif n == 0x4:
             self.V[0xF] = 1 if self.V[x] > self.V[y] else 0
