@@ -13,7 +13,7 @@ vous pouvez mettre un commentaire quand vous pusher le main pour voir ce que vou
 voila
 """
 import pygame
-
+import sys
 # =========================================================
 #                         CHIP-8
 # =========================================================
@@ -56,6 +56,17 @@ class Chip8:
         # on copie la ROM dans la memoire
         for i in range(len(rom)):
             self.memory[0x200 + i] = rom[i]
+
+    # -----------------------------------------------------
+    # fetch
+    # -----------------------------------------------------
+    def fetch(self):
+
+        opcode = (self.memory[self.pc] << 8) | self.memory[self.pc + 1]
+
+        self.pc += 2
+
+        return opcode
 
     # -----------------------------------------------------
     # EXECUTION OPCODES
@@ -113,15 +124,13 @@ class Chip8:
             self.V[x] = self.V[y]
 
         elif n == 0x1:
-            self.V[x] = self.V[x] & self.V[y]
+            self.V[x] = self.V[x] | self.V[y]
 
         elif n == 0x2:
-            self.V[x] = self.V[x] ^ self.V[y]
+            self.V[x] = self.V[x] & self.V[y]
 
         elif n == 0x3:
-            resultat = self.V[x] + self.V[y]
-            self.V[0xF] = 1 if resultat > 0xFF else 0
-            self.V[x] = resultat & 0xFF
+            self.V[x] = self.V[x] ^ self.V[y]
 
         elif n == 0x4:
             self.V[0xF] = 1 if self.V[x] > self.V[y] else 0
@@ -244,6 +253,8 @@ _patch_chip8()
 # ------------------------------
 #   BOUCLE CPU
 # ------------------------------
+
+"""
 def executer_cycle():
     global pc, I, stack
     if pc >= 0x200 + len(rom):
@@ -251,8 +262,10 @@ def executer_cycle():
         return
 
     # FETCH
-    opcode = (memoire[pc] << 8) | memoire[pc + 1] #opcode = chip8.fetch()
+    opcode = chip8.fetch()
+
     print("PC:", hex(pc), "Opcode:", hex(opcode))
+    chip8.execute_opcode(opcode)
 
     # Extraction des champs
     x = (opcode >> 8) & 0xF
@@ -291,6 +304,19 @@ def executer_cycle():
         pc = nnn + V[0]
         return
 
+"""
+
+
+def executer_cycle():
+    # FETCH
+    opcode = chip8.fetch()
+
+    print("PC:", hex(chip8.pc), "Opcode:", hex(opcode))
+    chip8.execute_opcode(opcode)
+
+    chip8.execute_opcode(opcode)
+
+
 # =========================================================
 #                      TIMER
 # =========================================================
@@ -307,7 +333,7 @@ def update_timers():
 # =========================================================
 #                   INITIALISATION
 # =========================================================
-
+pygame.init()
 chip8 = Chip8()
 print("Mémoire :", len(chip8.memory))
 print("PC :", chip8.pc)
@@ -320,11 +346,11 @@ print("V[10] =",chip8.V[10],"(attendu : 66)")
 
 pygame.display.set_caption("CHIP-8")
 
-pygame.init()
+
 clock = pygame.time.Clock()
 
 # charger ROM
-chip8.load_rom("PONG.ch8")
+chip8.load_rom("moving_sprite.ch8")
 
 
 # =========================================================
@@ -419,7 +445,8 @@ while running:
     update_timers()
 
     #affichage
-    draw_screen(screen)
+    window = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE))
+    draw_screen(window)
 
     #60 fps
     clock.tick(60)
