@@ -39,7 +39,11 @@ class Chip8:
         self.I = 0  # registre d'adresse (ajouté pour draw_sprite)
 
 
-    # ROM en mémoire
+    # -----------------------------------------------------
+    # CHARGEMENT ROM
+    # -----------------------------------------------------
+
+
     def load_rom(self, filename):
 
         # on ouvre le fichier ROM en mode binaire
@@ -50,6 +54,9 @@ class Chip8:
         for i in range(len(rom)):
             self.memory[0x200 + i] = rom[i]
 
+    # -----------------------------------------------------
+    # EXECUTION OPCODES
+    # -----------------------------------------------------
 
     def execute_opcode(self,opcode):
         x = (opcode & 0x0F00) >> 8
@@ -87,6 +94,9 @@ class Chip8:
         else:
             print("Opcode inconnu :",hex(opcode))
 
+    # -----------------------------------------------------
+    # OPCODES
+    # -----------------------------------------------------
 
     def op_6XNN(self, x, nn):
         self.V[x] = nn
@@ -129,6 +139,11 @@ class Chip8:
         else:
             print("Sous-opcode 8XY",hex(n),"inconnu")
 
+    # -----------------------------------------------------
+    # CLAVIER
+    # -----------------------------------------------------
+
+
     def op_EX9E(self, x):
         if self.keys[self.V[x]]:
             self.pc += 2
@@ -137,6 +152,17 @@ class Chip8:
         if not self.keys[self.V[x]]:
             self.pc += 2
 
+    def op_FX0A(self, x):
+        for i in range(16):
+            if self.keys[i]:
+                self.V[x] = i
+                return
+
+        self.pc -= 2
+
+    # -----------------------------------------------------
+    # TIMERS
+    # -----------------------------------------------------
     def op_FX07(self, x):
         self.V[x] = self.delay_timer
 
@@ -145,25 +171,47 @@ class Chip8:
 
     def op_FX18(self, x):
         self.sound_timer = self.V[x]
-
-    def op_FX0A(self, x):
-        for i in range(16):
-            if self.keys[i]:
-                self.V[x] = i
-                return
-
-        self.pc -= 2
       
 
-# TEST
-chip8 = Chip8()
-print("Mémoire :", len(chip8.memory))
-print("PC :", chip8.pc)
-print("SP :", chip8.sp)
-print("Pile :", len(chip8.stack))
-print("TEST 6XNN : SET")
-chip8.execute_opcode(0x6A42)
-print("V[10] =",chip8.V[10],"(attendu : 66)")
+
+# =========================================================
+#                   VARIABLES GLOBALES
+# =========================================================
+
+SCALE    = 10
+WIDTH    = 64
+HEIGHT   = 32
+COLOR_ON = (255, 255, 255)
+COLOR_OFF = (0,   0,   0)
+
+# Grille de pixels : False = éteint, True = allumé
+screen = [[False] * WIDTH for _ in range(HEIGHT)]
+
+# clavier
+clavier = [0] * 16
+# mapping touches
+mapping_touch = {
+
+    pygame.K_1: 0x1,
+    pygame.K_2: 0x2,
+    pygame.K_3: 0x3,
+    pygame.K_4: 0xC,
+
+    pygame.K_q: 0x4,
+    pygame.K_w: 0x5,
+    pygame.K_e: 0x6,
+    pygame.K_r: 0xD,
+
+    pygame.K_a: 0x7,
+    pygame.K_s: 0x8,
+    pygame.K_d: 0x9,
+    pygame.K_f: 0xE,
+
+    pygame.K_z: 0xA,
+    pygame.K_x: 0x0,
+    pygame.K_c: 0xB,
+    pygame.K_v: 0xF
+}
 
 # Code NADA : ajout de I, fetch, decode 
 def _patch_chip8():
@@ -201,68 +249,7 @@ def _patch_chip8():
     Chip8.cycle = cycle
 
 _patch_chip8()
-# fin 
-# ------------------------------
-#   VARIABLES GLOBALES CHIP-8
-# ------------------------------
-
-k=4
-h=5
-u=4
-j=5
-# ------------------------------
-#   GESTION DU CLAVIER / TIMER SOUND
-# ------------------------------
-
-#clavier
-clavier = [0]* 16
-# mapping clavier PC → CHIP-8
-"""
-mapping_touch = {
-    '1': 0x1, '2': 0x2, '3': 0x3, '4': 0xC,
-    'q': 0x4, 'w': 0x5, 'e': 0x6, 'r': 0xD,
-    'a': 0x7, 's': 0x8, 'd': 0x9, 'f': 0xE,
-    'z': 0xA, 'x': 0x0, 'c': 0xB, 'v': 0xF
-}
-"""
-
-mapping_touch = {
-    pygame.K_1: 0x1,
-    pygame.K_2: 0x2,
-    pygame.K_3: 0x3,
-    pygame.K_4: 0xC,
-
-    pygame.K_q: 0x4,
-    pygame.K_w: 0x5,
-    pygame.K_e: 0x6,
-    pygame.K_r: 0xD,
-
-    pygame.K_a: 0x7,
-    pygame.K_s: 0x8,
-    pygame.K_d: 0x9,
-    pygame.K_f: 0xE,
-
-    pygame.K_z: 0xA,
-    pygame.K_x: 0x0,
-    pygame.K_c: 0xB,
-    pygame.K_v: 0xF
-}
-
-"""
-def touche_appuyee(event):
-    touche = event.char.lower()
-    if touche in mapping_touch:
-        clavier[mapping_touch[touche]] = 1
-        chip8.keys[mapping_touch[touche]] = 1
-        print("Touche pressée :", mapping_touch[touche])
-
-def touche_relachee(event):
-    touche = event.char.lower()
-    if touche in mapping_touch:
-        clavier[mapping_touch[touche]] = 0
-        chip8.keys[mapping_touch[touche]] = 0
-        print("Touche relachee :", mapping_touch[touche])
-"""
+# fin
 
 def update_timers():
     if chip8.delay_timer > 0:
@@ -271,16 +258,6 @@ def update_timers():
     if chip8.sound_timer > 0:
         chip8.sound_timer -= 1
         print("BEEP")
-
-
-
-
-# ------------------------------
-#   CHARGEMENT ROM
-# ------------------------------
-
-
-
 
 # ------------------------------
 #   BOUCLE CPU
@@ -292,7 +269,7 @@ def executer_cycle():
         return
 
     # FETCH
-    opcode = (memoire[pc] << 8) | memoire[pc + 1]
+    opcode = (memoire[pc] << 8) | memoire[pc + 1] #opcode = chip8.fetch()
     print("PC:", hex(pc), "Opcode:", hex(opcode))
 
     # Extraction des champs
@@ -301,6 +278,8 @@ def executer_cycle():
     n = opcode & 0xF
     kk = opcode & 0xFF
     nnn = opcode & 0x0FFF
+
+
 
     # SAUTS, APPELS, COMPARAISONS person4
     
@@ -330,26 +309,47 @@ def executer_cycle():
         pc = nnn + V[0]
         return
 
+# =========================================================
+#                      TIMER
+# =========================================================
+
+def update_timers():
+    if chip8.delay_timer > 0:
+        chip8.delay_timer -= 1
+
+    if chip8.sound_timer > 0:
+        chip8.sound_timer -= 1
+        print("BEEP")
 
 
+# =========================================================
+#                   INITIALISATION
+# =========================================================
+
+chip8 = Chip8()
+print("Mémoire :", len(chip8.memory))
+print("PC :", chip8.pc)
+
+print("SP :", chip8.sp)
+print("Pile :", len(chip8.stack))
+print("TEST 6XNN : SET")
+chip8.execute_opcode(0x6A42)
+print("V[10] =",chip8.V[10],"(attendu : 66)")
+
+pygame.display.set_caption("CHIP-8")
+
+pygame.init()
+clock = pygame.time.Clock()
+
+# charger ROM
+chip8.load_rom("PONG.ch8")
 
 
-
-# ------------------------------
-#   INTERFACE
-# ------------------------------
+# =========================================================
+#                     AFFICHAGE
+# =========================================================
 
 #Code Bélinda
-
-SCALE    = 10
-WIDTH    = 64
-HEIGHT   = 32
-COLOR_ON = (255, 255, 255)
-COLOR_OFF = (0,   0,   0)
-
-# Grille de pixels : False = éteint, True = allumé
-screen = [[False] * WIDTH for _ in range(HEIGHT)]
-
 
 def draw_screen(window):
     """Redessine toute la fenêtre à partir de la grille screen."""
@@ -393,16 +393,17 @@ def draw_sprite(chip, x_reg, y_reg, n):
 
 
 
+# =========================================================
+#                  BOUCLE PRINCIPALE
+# =========================================================
 
-# gestion clavier
-pygame.init()
-clock = pygame.time.Clock()
-
-# charger une ROM
 running = True
 
 while running:
 
+    # ----------------------------
+    #        EVENEMENTS
+    # ----------------------------
     for event in pygame.event.get():
 
         if event.type == pygame.QUIT:
@@ -429,13 +430,16 @@ while running:
                 chip8.keys[key] = 0
 
                 print("Touche relâchée :", key)
-
+    #cpu
     executer_cycle()
 
+    #timer
     update_timers()
 
+    #affichage
     draw_screen(screen)
 
+    #60 fps
     clock.tick(60)
 
 pygame.quit()
