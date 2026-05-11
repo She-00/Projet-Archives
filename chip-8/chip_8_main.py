@@ -218,7 +218,6 @@ mapping_touch = {
 
 # Code NADA : ajout de I, fetch, decode 
 def _patch_chip8():
-
     # Ajouter fetch
     def fetch(self):
         opcode = (self.memory[self.pc] << 8) | self.memory[self.pc + 1]
