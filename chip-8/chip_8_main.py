@@ -12,16 +12,17 @@ vous pouvez mettre un commentaire quand vous pusher le main pour voir ce que vou
 
 voila
 """
-import tkinter as tk
-from tkinter import filedialog, messagebox
+import pygame
 
-#Debut du code :
-# code de naîma et nada : à mettre ici
+# =========================================================
+#                         CHIP-8
+# =========================================================
+
+
 # code de naima 
 # memoire et structure de base chip-8
 class Chip8:
     def __init__(self):
-
         # on cree 4096 cases de memoire
         self.memory = [0] * 4096
 
@@ -35,8 +36,17 @@ class Chip8:
         self.sp = 0
 
         self.V = [0] * 16
+        self.delay_timer = 0
+        self.sound_timer = 0
+        self.keys = [0] * 16
+        self.I = 0  # registre d'adresse (ajouté pour draw_sprite)
 
-    # ROM en mémoire
+
+    # -----------------------------------------------------
+    # CHARGEMENT ROM
+    # -----------------------------------------------------
+
+
     def load_rom(self, filename):
 
         # on ouvre le fichier ROM en mode binaire
@@ -47,6 +57,9 @@ class Chip8:
         for i in range(len(rom)):
             self.memory[0x200 + i] = rom[i]
 
+    # -----------------------------------------------------
+    # EXECUTION OPCODES
+    # -----------------------------------------------------
 
     def execute_opcode(self,opcode):
         x = (opcode & 0x0F00) >> 8
@@ -63,9 +76,30 @@ class Chip8:
             n = opcode & 0x000F
             self.op_8XYN(x, y, n)
 
+        elif (opcode & 0xF0FF) == 0xE09E:
+            self.op_EX9E(x)
+
+        elif (opcode & 0xF0FF) == 0xE0A1:
+            self.op_EXA1(x)
+
+        elif (opcode & 0xF0FF) == 0xF007:
+            self.op_FX07(x)
+
+        elif (opcode & 0xF0FF) == 0xF015:
+            self.op_FX15(x)
+
+        elif (opcode & 0xF0FF) == 0xF018:
+            self.op_FX18(x)
+
+        elif (opcode & 0xF0FF) == 0xF00A:
+            self.op_FX0A(x)
+
         else:
             print("Opcode inconnu :",hex(opcode))
 
+    # -----------------------------------------------------
+    # OPCODES
+    # -----------------------------------------------------
 
     def op_6XNN(self, x, nn):
         self.V[x] = nn
@@ -107,17 +141,80 @@ class Chip8:
 
         else:
             print("Sous-opcode 8XY",hex(n),"inconnu")
+
+    # -----------------------------------------------------
+    # CLAVIER
+    # -----------------------------------------------------
+
+
+    def op_EX9E(self, x):
+        if self.keys[self.V[x]]:
+            self.pc += 2
+
+    def op_EXA1(self, x):
+        if not self.keys[self.V[x]]:
+            self.pc += 2
+
+    def op_FX0A(self, x):
+        for i in range(16):
+            if self.keys[i]:
+                self.V[x] = i
+                return
+
+        self.pc -= 2
+
+    # -----------------------------------------------------
+    # TIMERS
+    # -----------------------------------------------------
+    def op_FX07(self, x):
+        self.V[x] = self.delay_timer
+
+    def op_FX15(self, x):
+        self.delay_timer = self.V[x]
+
+    def op_FX18(self, x):
+        self.sound_timer = self.V[x]
       
 
-# TEST
-chip8 = Chip8()
-print("Mémoire :", len(chip8.memory))
-print("PC :", chip8.pc)
-print("SP :", chip8.sp)
-print("Pile :", len(chip8.stack))
-print("TEST 6XNN : SET")
-chip8.execute_opcode(0x6A42)
-print("V[10] =",chip8.V[10],"(attendu : 66)")
+
+# =========================================================
+#                   VARIABLES GLOBALES
+# =========================================================
+
+SCALE    = 10
+WIDTH    = 64
+HEIGHT   = 32
+COLOR_ON = (255, 255, 255)
+COLOR_OFF = (0,   0,   0)
+
+# Grille de pixels : False = éteint, True = allumé
+screen = [[False] * WIDTH for _ in range(HEIGHT)]
+
+# clavier
+clavier = [0] * 16
+# mapping touches
+mapping_touch = {
+
+    pygame.K_1: 0x1,
+    pygame.K_2: 0x2,
+    pygame.K_3: 0x3,
+    pygame.K_4: 0xC,
+
+    pygame.K_q: 0x4,
+    pygame.K_w: 0x5,
+    pygame.K_e: 0x6,
+    pygame.K_r: 0xD,
+
+    pygame.K_a: 0x7,
+    pygame.K_s: 0x8,
+    pygame.K_d: 0x9,
+    pygame.K_f: 0xE,
+
+    pygame.K_z: 0xA,
+    pygame.K_x: 0x0,
+    pygame.K_c: 0xB,
+    pygame.K_v: 0xF
+}
 
 # Code NADA : ajout de I, fetch, decode 
 def _patch_chip8():
@@ -143,54 +240,7 @@ def _patch_chip8():
     Chip8.decode_and_execute = decode_and_execute
 
 _patch_chip8()
-# fin 
-# ------------------------------
-#   VARIABLES GLOBALES CHIP-8
-# ------------------------------
-
-k=4
-h=5
-u=4
-j=5
-# ------------------------------
-#   GESTION DU CLAVIER / TIMER SOUND
-# ------------------------------
-
-
-# clavier CHIP-8 (16 touches)
-clavier = [0] * 16
-
-# mapping clavier PC → CHIP-8
-mapping_touch = {
-    '1': 0x1, '2': 0x2, '3': 0x3, '4': 0xC,
-    'q': 0x4, 'w': 0x5, 'e': 0x6, 'r': 0xD,
-    'a': 0x7, 's': 0x8, 'd': 0x9, 'f': 0xE,
-    'z': 0xA, 'x': 0x0, 'c': 0xB, 'v': 0xF
-}
-#timer son
-delay_timer = 0
-sound_timer = 0
-
-def touche_appuyee(event):
-    touche = event.char.lower()
-    if touche in mapping_touch:
-        clavier[mapping_touch[touche]] = 1
-        print("Touche pressée :", mapping_touch[touche])
-
-def touche_relachee(event):
-    touche = event.char.lower()
-    if touche in mapping_touch:
-        clavier[mapping_touch[touche]] = 0
-        print("Touche relachee :", mapping_touch[touche])
-
-
-
-# ------------------------------
-#   CHARGEMENT ROM
-# ------------------------------
-
-
-
+# fin
 
 # ------------------------------
 #   BOUCLE CPU
@@ -202,7 +252,7 @@ def executer_cycle():
         return
 
     # FETCH
-    opcode = (memoire[pc] << 8) | memoire[pc + 1]
+    opcode = (memoire[pc] << 8) | memoire[pc + 1] #opcode = chip8.fetch()
     print("PC:", hex(pc), "Opcode:", hex(opcode))
 
     # Extraction des champs
@@ -211,6 +261,8 @@ def executer_cycle():
     n = opcode & 0xF
     kk = opcode & 0xFF
     nnn = opcode & 0x0FFF
+
+
 
     # SAUTS, APPELS, COMPARAISONS person4
     
@@ -240,23 +292,137 @@ def executer_cycle():
         pc = nnn + V[0]
         return
 
+# =========================================================
+#                      TIMER
+# =========================================================
+
+def update_timers():
+    if chip8.delay_timer > 0:
+        chip8.delay_timer -= 1
+
+    if chip8.sound_timer > 0:
+        chip8.sound_timer -= 1
+        print("BEEP")
+
+
+# =========================================================
+#                   INITIALISATION
+# =========================================================
+
+chip8 = Chip8()
+print("Mémoire :", len(chip8.memory))
+print("PC :", chip8.pc)
+
+print("SP :", chip8.sp)
+print("Pile :", len(chip8.stack))
+print("TEST 6XNN : SET")
+chip8.execute_opcode(0x6A42)
+print("V[10] =",chip8.V[10],"(attendu : 66)")
+
+pygame.display.set_caption("CHIP-8")
+
+pygame.init()
+clock = pygame.time.Clock()
+
+# charger ROM
+chip8.load_rom("PONG.ch8")
+
+
+# =========================================================
+#                     AFFICHAGE
+# =========================================================
+
+#Code Bélinda
+
+def draw_screen(window):
+    """Redessine toute la fenêtre à partir de la grille screen."""
+    window.fill((0, 0, 0))
+    for y in range(HEIGHT):
+        for x in range(WIDTH):
+            if screen[y][x]:
+                pygame.draw.rect(window, COLOR_ON,
+                                 (x * SCALE, y * SCALE, SCALE, SCALE))
+    pygame.display.flip()
+
+
+def clear_screen():
+    """Instruction 00E0 — Efface tous les pixels."""
+    for y in range(HEIGHT):
+        for x in range(WIDTH):
+            screen[y][x] = False
+
+
+def draw_sprite(chip, x_reg, y_reg, n):
+    """
+    Instruction DXYN — Dessine un sprite.
+    Utilise les registres et la mémoire de l'instance Chip8.
+    """
+    x_start = chip.V[x_reg] % WIDTH
+    y_start = chip.V[y_reg] % HEIGHT
+    chip.V[0xF] = 0   # reset collision
+
+    for row in range(n):
+        sprite_byte = chip.memory[chip.I + row]
+        for col in range(8):
+            if sprite_byte & (0x80 >> col):
+                x = (x_start + col) % WIDTH
+                y = (y_start + row) % HEIGHT
+                if screen[y][x]:
+                    chip.V[0xF] = 1       # collision
+                screen[y][x] ^= True      # XOR
 
 
 
 
 
-# ------------------------------
-#   INTERFACE
-# ------------------------------
 
+# =========================================================
+#                  BOUCLE PRINCIPALE
+# =========================================================
 
+running = True
 
+while running:
 
+    # ----------------------------
+    #        EVENEMENTS
+    # ----------------------------
+    for event in pygame.event.get():
 
+        if event.type == pygame.QUIT:
+            running = False
 
+        elif event.type == pygame.KEYDOWN:
 
+            if event.key in mapping_touch:
 
+                key = mapping_touch[event.key]
 
-# gestion clavier
-#root.bind("<KeyPress>", touche_appuyee)
-#root.bind("<KeyRelease>", touche_relachee)
+                clavier[key] = 1
+                chip8.keys[key] = 1
+
+                print("Touche pressée :", key)
+
+        elif event.type == pygame.KEYUP:
+
+            if event.key in mapping_touch:
+
+                key = mapping_touch[event.key]
+
+                clavier[key] = 0
+                chip8.keys[key] = 0
+
+                print("Touche relâchée :", key)
+    #cpu
+    executer_cycle()
+
+    #timer
+    update_timers()
+
+    #affichage
+    draw_screen(screen)
+
+    #60 fps
+    clock.tick(60)
+
+pygame.quit()
