@@ -121,12 +121,6 @@ print("V[10] =",chip8.V[10],"(attendu : 66)")
 
 # Code NADA : ajout de I, fetch, decode 
 def _patch_chip8():
-    # Ajouter I dans __init__
-    original_init = Chip8.__init__
-    def new_init(self):
-        original_init(self)
-        self.I = 0
-    Chip8.__init__ = new_init
 
     # Ajouter fetch
     def fetch(self):
@@ -147,12 +141,6 @@ def _patch_chip8():
         else:
             self.execute_opcode(opcode)
     Chip8.decode_and_execute = decode_and_execute
-
-    # Ajouter cycle
-    def cycle(self):
-        opcode = self.fetch()
-        self.decode_and_execute(opcode)
-    Chip8.cycle = cycle
 
 _patch_chip8()
 # fin 
