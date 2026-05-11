@@ -38,6 +38,7 @@ class Chip8:
         self.keys = [0] * 16
         self.I = 0  # registre d'adresse (ajouté pour draw_sprite)
 
+
     # ROM en mémoire
     def load_rom(self, filename):
 
@@ -216,14 +217,14 @@ j=5
 #clavier
 clavier = [0]* 16
 # mapping clavier PC → CHIP-8
-""""
+"""
 mapping_touch = {
     '1': 0x1, '2': 0x2, '3': 0x3, '4': 0xC,
     'q': 0x4, 'w': 0x5, 'e': 0x6, 'r': 0xD,
     'a': 0x7, 's': 0x8, 'd': 0x9, 'f': 0xE,
     'z': 0xA, 'x': 0x0, 'c': 0xB, 'v': 0xF
 }
-
+"""
 
 mapping_touch = {
     pygame.K_1: 0x1,
@@ -246,8 +247,8 @@ mapping_touch = {
     pygame.K_c: 0xB,
     pygame.K_v: 0xF
 }
-"""
 
+"""
 def touche_appuyee(event):
     touche = event.char.lower()
     if touche in mapping_touch:
@@ -261,6 +262,7 @@ def touche_relachee(event):
         clavier[mapping_touch[touche]] = 0
         chip8.keys[mapping_touch[touche]] = 0
         print("Touche relachee :", mapping_touch[touche])
+"""
 
 def update_timers():
     if chip8.delay_timer > 0:
@@ -393,5 +395,47 @@ def draw_sprite(chip, x_reg, y_reg, n):
 
 
 # gestion clavier
-#root.bind("<KeyPress>", touche_appuyee)
-#root.bind("<KeyRelease>", touche_relachee)
+pygame.init()
+clock = pygame.time.Clock()
+
+# charger une ROM
+running = True
+
+while running:
+
+    for event in pygame.event.get():
+
+        if event.type == pygame.QUIT:
+            running = False
+
+        elif event.type == pygame.KEYDOWN:
+
+            if event.key in mapping_touch:
+
+                key = mapping_touch[event.key]
+
+                clavier[key] = 1
+                chip8.keys[key] = 1
+
+                print("Touche pressée :", key)
+
+        elif event.type == pygame.KEYUP:
+
+            if event.key in mapping_touch:
+
+                key = mapping_touch[event.key]
+
+                clavier[key] = 0
+                chip8.keys[key] = 0
+
+                print("Touche relâchée :", key)
+
+    executer_cycle()
+
+    update_timers()
+
+    draw_screen(screen)
+
+    clock.tick(60)
+
+pygame.quit()
