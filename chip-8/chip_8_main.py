@@ -14,8 +14,11 @@ voila
 """
 import pygame
 
-#Debut du code :
-# code de naîma et nada : à mettre ici
+# =========================================================
+#                         CHIP-8
+# =========================================================
+
+
 # code de naima 
 # memoire et structure de base chip-8
 class Chip8:
@@ -250,14 +253,6 @@ def _patch_chip8():
 
 _patch_chip8()
 # fin
-
-def update_timers():
-    if chip8.delay_timer > 0:
-        chip8.delay_timer -= 1
-
-    if chip8.sound_timer > 0:
-        chip8.sound_timer -= 1
-        print("BEEP")
 
 # ------------------------------
 #   BOUCLE CPU
