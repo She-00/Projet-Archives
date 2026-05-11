@@ -27,8 +27,6 @@ FONTSET = [
     0xF0, 0x80, 0xF0, 0x80, 0x80,  # F
 ]
 
-
-# code de naima
 class Chip8:
     def __init__(self):
         # 4096 cases de mémoire
@@ -107,7 +105,7 @@ class Chip8:
         if opcode == 0x00E0:
             clear_screen()
 
-        # CORRECTION : 00EE — Retour de sous-routine
+        # 00EE — Retour de sous-routine
         elif opcode == 0x00EE:
             self.sp -= 1
             self.pc = self.stack[self.sp]
@@ -116,23 +114,23 @@ class Chip8:
         elif (opcode & 0xF000) == 0x1000:
             self.pc = nnn
 
-        # CORRECTION : 2NNN — Appel de sous-routine à NNN
+        # 2NNN — Appel de sous-routine à NNN
         elif (opcode & 0xF000) == 0x2000:
             self.stack[self.sp] = self.pc   # on sauvegarde l'adresse de retour
             self.sp += 1
             self.pc = nnn
 
-        # CORRECTION : 3XNN — Sauter si V[x] == nn
+        # 3XNN — Sauter si V[x] == nn
         elif (opcode & 0xF000) == 0x3000:
             if self.V[x] == nn:
                 self.pc += 2
 
-        # CORRECTION : 4XNN — Sauter si V[x] != nn
+        # 4XNN — Sauter si V[x] != nn
         elif (opcode & 0xF000) == 0x4000:
             if self.V[x] != nn:
                 self.pc += 2
 
-        # CORRECTION : 5XY0 — Sauter si V[x] == V[y]
+        # 5XY0 — Sauter si V[x] == V[y]
         elif (opcode & 0xF000) == 0x5000:
             if self.V[x] == self.V[y]:
                 self.pc += 2
@@ -149,7 +147,7 @@ class Chip8:
         elif (opcode & 0xF000) == 0x8000:
             self.op_8XYN(x, y, n)
 
-        # CORRECTION : 9XY0 — Sauter si V[x] != V[y]
+        # 9XY0 — Sauter si V[x] != V[y]
         elif (opcode & 0xF000) == 0x9000:
             if self.V[x] != self.V[y]:
                 self.pc += 2
@@ -158,11 +156,11 @@ class Chip8:
         elif (opcode & 0xF000) == 0xA000:
             self.I = nnn
 
-        # CORRECTION : BNNN — Sauter à NNN + V[0]
+        # BNNN — Sauter à NNN + V[0]
         elif (opcode & 0xF000) == 0xB000:
             self.pc = nnn + self.V[0]
 
-        # CORRECTION : CXNN — V[x] = nombre aléatoire AND nn
+        # CXNN — V[x] = nombre aléatoire AND nn
         elif (opcode & 0xF000) == 0xC000:
             import random
             self.V[x] = random.randint(0, 255) & nn
@@ -201,27 +199,27 @@ class Chip8:
         elif (opcode & 0xF0FF) == 0xF018:
             self.sound_timer = self.V[x]
 
-        # CORRECTION : FX1E — I = I + V[x]
+        # FX1E — I = I + V[x]
         elif (opcode & 0xF0FF) == 0xF01E:
             self.I = (self.I + self.V[x]) & 0xFFFF
 
-        # CORRECTION : FX29 — I pointe vers le sprite du chiffre V[x]
+        # FX29 — I pointe vers le sprite du chiffre V[x]
         # Chaque sprite fait 5 octets, ils commencent à l'adresse 0x000
         elif (opcode & 0xF0FF) == 0xF029:
             self.I = self.V[x] * 5
 
-        # CORRECTION : FX33 — Stocker V[x] en BCD (centaines, dizaines, unités)
+        # FX33 — Stocker V[x] en BCD (centaines, dizaines, unités)
         elif (opcode & 0xF0FF) == 0xF033:
             self.memory[self.I]     = self.V[x] // 100
             self.memory[self.I + 1] = (self.V[x] // 10) % 10
             self.memory[self.I + 2] = self.V[x] % 10
 
-        # CORRECTION : FX55 — Sauvegarder V[0]..V[x] en mémoire à partir de I
+        # FX55 — Sauvegarder V[0]..V[x] en mémoire à partir de I
         elif (opcode & 0xF0FF) == 0xF055:
             for i in range(x + 1):
                 self.memory[self.I + i] = self.V[i]
 
-        # CORRECTION : FX65 — Charger V[0]..V[x] depuis la mémoire à partir de I
+        # FX65 — Charger V[0]..V[x] depuis la mémoire à partir de I
         elif (opcode & 0xF0FF) == 0xF065:
             for i in range(x + 1):
                 self.V[i] = self.memory[self.I + i]
@@ -238,7 +236,7 @@ class Chip8:
         if n == 0x0:
             self.V[x] = self.V[y]
 
-        # CORRECTION : 8XY1 — V[x] = V[x] OR V[y]  (c'était AND avant, c'est faux)
+        # 8XY1 — V[x] = V[x] OR V[y]  (c'était AND avant, c'est faux)
         elif n == 0x1:
             self.V[x] = self.V[x] | self.V[y]
 
@@ -246,7 +244,7 @@ class Chip8:
         elif n == 0x2:
             self.V[x] = self.V[x] & self.V[y]
 
-        # CORRECTION : 8XY3 — V[x] = V[x] XOR V[y]  (c'était une addition avant, c'est faux)
+        # 8XY3 — V[x] = V[x] XOR V[y]  (c'était une addition avant, c'est faux)
         elif n == 0x3:
             self.V[x] = self.V[x] ^ self.V[y]
 
@@ -266,7 +264,7 @@ class Chip8:
             self.V[0xF] = self.V[x] & 0x1
             self.V[x] = self.V[x] >> 1
 
-        # CORRECTION : 8XY7 — V[x] = V[y] - V[x], VF = 1 si pas d'emprunt
+        # 8XY7 — V[x] = V[y] - V[x], VF = 1 si pas d'emprunt
         elif n == 0x7:
             self.V[0xF] = 1 if self.V[y] >= self.V[x] else 0
             self.V[x] = (self.V[y] - self.V[x]) & 0xFF
@@ -311,6 +309,14 @@ mapping_touch = {
 # =========================================================
 
 chip8 = Chip8()
+print("Mémoire :", len(chip8.memory))
+print("PC :", chip8.pc)
+
+print("SP :", chip8.sp)
+print("Pile :", len(chip8.stack))
+print("TEST 6XNN : SET")
+chip8.execute_opcode(0x6A42)
+print("V[10] =",chip8.V[10],"(attendu : 66)")
 
 pygame.init()
 pygame.display.set_caption("CHIP-8 - Les Archives du Futur")
@@ -324,8 +330,6 @@ chip8.load_rom("test_opcode.ch8")
 # =========================================================
 #                     AFFICHAGE
 # =========================================================
-
-# Code Bélinda
 
 def draw_screen(window):
     """Redessine toute la fenêtre à partir de la grille screen."""
@@ -388,7 +392,6 @@ def update_timers():
 def executer_cycle():
     """Lit, décode et exécute un opcode."""
     opcode = chip8.fetch()
-    # CORRECTION : on appelle bien decode_and_execute (et non execute_opcode directement)
     chip8.decode_and_execute(opcode)
 
 
@@ -409,13 +412,13 @@ while running:
         elif event.type == pygame.KEYDOWN:
             if event.key in mapping_touch:
                 key = mapping_touch[event.key]
-                chip8.keys[key] = 1   # CORRECTION : on utilise uniquement chip8.keys
+                chip8.keys[key] = 1
                 print("Touche pressée :", hex(key))
 
         elif event.type == pygame.KEYUP:
             if event.key in mapping_touch:
                 key = mapping_touch[event.key]
-                chip8.keys[key] = 0   # CORRECTION : on utilise uniquement chip8.keys
+                chip8.keys[key] = 0
                 print("Touche relâchée :", hex(key))
 
     # Exécuter un cycle CPU
