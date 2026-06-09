@@ -323,7 +323,7 @@ window = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE))
 clock = pygame.time.Clock()
 
 # Charger la ROM
-chip8.load_rom("test_opcode.ch8")
+chip8.load_rom("IBM_Logo.ch8")
 
 
 # =========================================================
