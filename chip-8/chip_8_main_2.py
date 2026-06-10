@@ -336,7 +336,6 @@ print("V[10] =",chip8.V[10],"(attendu : 66)")
 pygame.init()
 pygame.display.set_caption("CHIP-8 - Les Archives du Futur")
 window = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE))
-pygame.event.set_grab(True)
 clock = pygame.time.Clock()
 
 # Charger la ROM
