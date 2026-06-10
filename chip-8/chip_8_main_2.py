@@ -311,10 +311,13 @@ def choisir_rom():
 
     fichier = filedialog.askopenfilename(
         title="Choisir une ROM CHIP-8",
-        filetypes=[("ROM CHIP-8", "*.ch8"), ("Tous les fichiers", "*.*")]
+        filetypes=[("ROM CHIP-8", "*.ch8")]
     )
 
+    root.destroy()
+
     return fichier
+
 
 # =========================================================
 #                   INITIALISATION
@@ -333,6 +336,7 @@ print("V[10] =",chip8.V[10],"(attendu : 66)")
 pygame.init()
 pygame.display.set_caption("CHIP-8 - Les Archives du Futur")
 window = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE))
+pygame.event.set_grab(True)
 clock = pygame.time.Clock()
 
 # Charger la ROM
@@ -429,19 +433,22 @@ while running:
             running = False
 
         elif event.type == pygame.KEYDOWN:
+            print(event.key)
             if event.key in mapping_touch:
                 key = mapping_touch[event.key]
                 chip8.keys[key] = 1
                 print("Touche pressée :", hex(key))
 
         elif event.type == pygame.KEYUP:
+            print(event.key)
             if event.key in mapping_touch:
                 key = mapping_touch[event.key]
                 chip8.keys[key] = 0
                 print("Touche relâchée :", hex(key))
 
     # Exécuter un cycle CPU
-    executer_cycle()
+    for i in range(8):
+        executer_cycle()
 
     # Mettre à jour les timers
     update_timers()
