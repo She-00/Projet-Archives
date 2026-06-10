@@ -1,5 +1,6 @@
 import pygame
-
+import tkinter as tk
+from tkinter import filedialog
 # =========================================================
 #                         CHIP-8
 # =========================================================
@@ -302,6 +303,18 @@ mapping_touch = {
     pygame.K_z: 0xA, pygame.K_x: 0x0, pygame.K_c: 0xB, pygame.K_v: 0xF,
 }
 
+def choisir_rom():
+
+    root = tk.Tk()
+
+    root.withdraw()
+
+    fichier = filedialog.askopenfilename(
+        title="Choisir une ROM CHIP-8",
+        filetypes=[("ROM CHIP-8", "*.ch8"), ("Tous les fichiers", "*.*")]
+    )
+
+    return fichier
 
 # =========================================================
 #                   INITIALISATION
@@ -323,7 +336,14 @@ window = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE))
 clock = pygame.time.Clock()
 
 # Charger la ROM
-chip8.load_rom("IBM_Logo.ch8")
+rom_path = choisir_rom()
+
+if rom_path:
+    chip8.load_rom(rom_path)
+else:
+    print("Aucune ROM sélectionnée")
+    pygame.quit()
+    exit()
 
 
 # =========================================================
